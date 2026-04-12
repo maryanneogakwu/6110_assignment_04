@@ -1,23 +1,47 @@
 # 6110_assignment_04
-Single Cell RNA seq analysis of nasal influenza infection
+**Single Cell RNA seq analysis of nasal influenza infection in Mouse**  
+Author: Maryanne Ogakwu  
+Dataset:   Primary nasal influenza infection rewires tissue-scale memory response dynamics by Kazer et al. 2025
+
+----
+
+## Introduction
+
+----
+## Methods
+### 1. Data Acqusition
+
+### 2. Quality Control Checks
+
+### 3. Normalisation and Scaling
+
+### 4. PCA
+
+### 5. UMAP
+
+### 6. Feature Plots
+
+### 7. Automated Annotation
+
+### 8. Manual Annotation
+
+### 9. Differential Expression Analysis using MAST
+
+### 10. ORA Enrichment of top genes in cluster 0
+
+### 11. Cell Trajectory using Slingshot
+
+----
+## Results
+
+----
+## Discussion
 
 
+----
+## Conclusion
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+----
 
 
 ## Dependencies and Packages
@@ -38,3 +62,6 @@ Single Cell RNA seq analysis of nasal influenza infection
 | MAST | 1.33.0 | Bio C 3.21 | Model Based Analysis of Single Cell data |
 | SingleCellExperiment | 1.30.1 |Bio C 3.21 | S4 classes for Single Cell data |
 | Slingshot | 2.16.0 | Bio C 3.21 | Tools for ordering single cell sequences |
+
+## References
+
