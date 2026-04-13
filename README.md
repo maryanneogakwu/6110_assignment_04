@@ -1,7 +1,7 @@
 # 6110_assignment_04
 **Single Cell RNA seq analysis of nasal influenza infection in Mouse**  
 Author: Maryanne Ogakwu  
-Dataset:   Primary nasal influenza infection rewires tissue-scale memory response dynamics by Kazer et al. 2025
+Dataset:   Primary nasal influenza infection rewires tissue-scale memory response dynamics by Kazer et al. 2025 [1]
 
 ----
 
@@ -19,7 +19,7 @@ Slingshot was selected over Monocle3 as it integrates directly with the SingleCe
 ----
 ## Methods
 ### 1. Data Acqusition
-Data used in this study was collected from the 2025 study by Kazer et al on  "Primary nasal influenza infection rewires tissue-scale memory response dynamic". The dataset was transformed  into a seurat object containing the metadata and the data, and was provided to the class by the course instrutor.  
+Data used in this study was collected from the 2025 study by Kazer et al on  "Primary nasal influenza infection rewires tissue-scale memory response dynamic" [1]. The dataset was transformed  into a seurat object containing the metadata and the data, and was provided to the class by the course instrutor.  
 Data can be downloaded via the link below.  
 ```
 https://aacgenomicspublic.blob.core.windows.net/public/seurat_ass4.rds
@@ -292,4 +292,4 @@ Slingshot trajectory analysis was performed on the full dataset using epithelial
 | Slingshot | 2.16.0 | Bio C 3.21 | Tools for ordering single cell sequences |
 
 ## References
-
+[1] Kazer, S. W., Match, C. M., Langan, E. M., Messou, M. A., LaSalle, T. J., O'Leary, E., Marbourg, J., Naughton, K., von Andrian, U. H., & Ordovas-Montanes, J. (2024). Primary nasal influenza infection rewires tissue-scale memory response dynamics. Immunity, 57(8), 1955–1974.e8. https://doi.org/10.1016/j.immuni.2024.06.005
