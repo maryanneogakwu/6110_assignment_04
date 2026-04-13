@@ -6,6 +6,8 @@ Dataset:   Primary nasal influenza infection rewires tissue-scale memory respons
 ----
 
 ## Introduction
+#### Justifications
+LogNormalize was selected over SCTransform due to computational constraints imposed by the dataset size of 156,572 cells. SCTransform required approximately 29.3 GB of contiguous RAM during residual matrix computation, exceeding available memory. LogNormalize is a well-established alternative that produces comparable clustering and differential expression results, particularly in large datasets where increased cell count provides sufficient statistical power. Mitochondrial gene expression was additionally regressed out during scaling to compensate for technical variation that SCTransform would otherwise account for.
 
 ----
 ## Methods
@@ -26,7 +28,7 @@ The low quality cells were removed using the code below. `nFeature_RNA` > 200 us
 ~~~
 seurat_ass4 <- subset(seurat_ass4, subset = nFeature_RNA > 200 & percent.mt < 20)
 ~~~
-After quality control, the data was visualised using single cell violin plots to determine the thresholds to be used to filter the data and a regresion line graph to view the qc metrics.  
+Before and fter quality control, the data was visualised using single cell violin plots to determine the thresholds to be used to filter the data and a regresion line graph to view the qc metrics.  
 Single cell violin plot:
 ~~~
 VlnPlot(seurat_ass4, features = c ("nCount_RNA", "nFeature_RNA", "percent.mt"), ncol = 3)
@@ -38,8 +40,31 @@ FeatureScatter(seurat_ass4, feature1= "nCount_RNA", feature2 = "nFeature_RNA") +
 ~~~
 
 ### 3. Normalisation and Scaling
+Raw data counts were normalized using `LogNormalize` method in Seurat which divides each gene count by the total counts per cell, multiplies by a scale factor of 10,000 and applies a log transformation. This makes the cells more comparable to each other as each cell captures a different total number of RNA molecules due to technical variation.
+~~~
+seurat_ass4 <- NormalizeData(seurat_ass4, normalization.method = "LogNormalize")
+~~~
+The top 2000 variable genes were extracted using `Variance Stabilizing Transformation (VST)` method for the analysis because not all 25,083 genes present in the dataset are informative for distinguishing cell types, for example, housekeeping genes that are expressed equally in all cells add noise without adding information. VST accounts for the relationship between mean expression and variance.
+~~~
+seurat_ass4 <- FindVariableFeatures(seurat_ass4, selection.method = "vst", nfeatures = 2000)
+~~~
+Data was scaled using `ScaleData` to prepare the dataset for PCA and Clustering. This step prevents highly expressed genes from dominating PCA simply due to their magnitude. `vars.to.regress = "percent.mt"` was used to remove the influence of mitochondrial gene expression from the data so it doesn't drive clustering. Scaling all 25,083 genes required 29.3 GB of RAM which exceeded my system's available memory causing crashing. To remedy this, scaling was carried out on only variable features in the dataset, as downsteam PCA and UMAP require only the variable features.
+~~~
+seurat_ass4 <- ScaleData(seurat_ass4, vars.to.regress = "percent.mt")
+~~~
 
 ### 4. PCA
+Principal component analysis (PCA) was performed on the 2,000 most variable genes using `VariableFeatures` to reduce dimensionality prior to clustering.  
+~~~
+seurat_ass4 <- RunPCA(seurat_ass4, features = VariableFeatures(object = seurat_ass4))
+~~~
+Visualizations were carried out using a heat map, a scatter plot and an elbow plot. Heatmaps of top gene loadings were examined to confirm that principal components captured biologically meaningful sources of variation. The scatter plot was used to visualise the cells in the PCA space to determine whether the cells are separating into distinct groups, identify batch effects and confirm that prior normalization and scaling worked. The Elbow plot was plotted to determine the number of significant principal components and identify the point at which additional components explained minimal additional variance. 
+~~~
+DimHeatmap(seurat_ass4, dims = 1, cells = 500, balanced = TRUE)
+DimPlot(seurat_ass4, reduction = 'pca') + NoLegend() +
+  ggtitle("PCA after Normalization and Scaling")
+ElbowPlot(seurat_ass4)
+~~~
 
 ### 5. UMAP
 
