@@ -21,7 +21,7 @@ UMAP was selected over tSNE for final two-dimensional visualisation as it preser
 SingleR was selected over Seurat's label transfer approach for automated cell type annotation because while Seurat label transfer is a widely used method that projects query cells onto a reference UMAP and transfers labels based on nearest neighbour relationships, it requires a well-matched single-cell reference dataset from the same tissue and platform, limiting its applicability when such a reference is unavailable [18].  
 
 ##### Differential Expression Analysis  
-MAST was selected over DESeq2 as it was specifically developed for single-cell RNA sequencing data. Unlike DESeq2, which was originally designed for bulk RNA sequencing, MAST employs a hurdle model that simultaneously accounts for both the proportion of cells expressing a gene and the expression level among expressing cells, making it well suited to handle the zero-inflated nature of scRNA-seq data where many genes are detected in only a subset of cells [6]. MAST additionally accounts for cellular detection rate as a covariate, reducing confounding technical variation. While DESeq2 has been adapted for single-cell use, its negative binomial model does not account for dropout events as effectively as MAST, making MAST the more statistically appropriate method for this dataset [16].    
+MAST was selected over DESeq2 as it was specifically developed for single-cell RNA sequencing data. Unlike DESeq2, which was originally designed for bulk RNA sequencing, MAST employs a hurdle model that simultaneously accounts for both the proportion of cells expressing a gene and the expression level among expressing cells, making it well suited to handle the zero-inflated nature of scRNA-seq data where many genes are detected in only a subset of cells [6]. MAST additionally accounts for cellular detection rate as a covariate, reducing confounding technical variation. While DESeq2 has been adapted for single-cell use, its negative binomial model does not account for dropout events as effectively as MAST, making MAST the more statistically appropriate method for this dataset [16]. 
 
 ##### Cell Trajectory Analysis  
 Slingshot was selected over Monocle3 as it integrates directly with the SingleCellExperiment framework compatible with our existing Seurat workflow, avoiding the additional object conversion required by Monocle3. While Monocle3 supports complex trajectory topologies, its graph learning algorithm is considerably slower on datasets exceeding 100,000 cells, making it less practical for this 156,572 cell dataset. Additionally, Slingshot's ability to incorporate predefined cell type labels from our SingleR annotation as trajectory nodes allowed biologically informed trajectory inference consistent with our annotation results.
@@ -35,7 +35,7 @@ Data can be downloaded via the link below.
 https://aacgenomicspublic.blob.core.windows.net/public/seurat_ass4.rds
 ```
 ### 2. Quality Control 
-Qualitity Control checks were performed on the seurat object by calculating the mitochondrial percentage present in the cells and filtering to remove cells with very low numbers of unique genes detected as they could be low quality droplets or empty cells. Cells with very high gene counts will also be removed as these consititute the characteristics of doublets.  
+Qualitity Control checks were performed on the Seurat object (v5.3.0) by calculating the mitochondrial percentage present in the cells and filtering to remove cells with very low numbers of unique genes detected as they could be low quality droplets or empty cells. Cells with very high gene counts will also be removed as these consititute the characteristics of doublets.  
 Caclculating mitochondrial contant. Note that the data set contains cells from *Mus musculus* (house mouse), so mitochondrial is denoted as `mt`. 
 ~~~
 seurat_ass4[["percent.mt"]] <- PercentageFeatureSet(seurat_ass4, pattern = "^mt-")
@@ -45,7 +45,7 @@ The low quality cells were removed using the code below. `nFeature_RNA` > 200 us
 ~~~
 seurat_ass4 <- subset(seurat_ass4, subset = nFeature_RNA > 200 & percent.mt < 20)
 ~~~
-Before and fter quality control, the data was visualised using single cell violin plots to determine the thresholds to be used to filter the data and a regresion line graph to view the qc metrics.  
+Before and after quality control, the data was visualised using single cell violin plots (VlnPlot) in the Seurat package (v 5.4.0) to determine the thresholds to be used to filter the data and a regresion line graph to view the qc metrics.  
 Single cell violin plot:
 ~~~
 VlnPlot(seurat_ass4, features = c ("nCount_RNA", "nFeature_RNA", "percent.mt"), ncol = 3)
@@ -57,25 +57,26 @@ FeatureScatter(seurat_ass4, feature1= "nCount_RNA", feature2 = "nFeature_RNA") +
 ~~~
 
 ### 3. Normalisation and Scaling
-Raw data counts were normalized using `LogNormalize` method in Seurat which divides each gene count by the total counts per cell, multiplies by a scale factor of 10,000 and applies a log transformation. This makes the cells more comparable to each other as each cell captures a different total number of RNA molecules due to technical variation.
+Raw data counts were normalized using `LogNormalize` method in Seurat package (v5.4.0) which divides each gene count by the total counts per cell, multiplies by a scale factor of 10,000 and applies a log transformation. This makes the cells more comparable to each other as each cell captures a different total number of RNA molecules due to technical variation.
 ~~~
 seurat_ass4 <- NormalizeData(seurat_ass4, normalization.method = "LogNormalize")
 ~~~
-The top 2000 variable genes were extracted using `Variance Stabilizing Transformation (VST)` method for the analysis because not all 25,083 genes present in the dataset are informative for distinguishing cell types, for example, housekeeping genes that are expressed equally in all cells add noise without adding information. VST accounts for the relationship between mean expression and variance.
+The top 2000 variable genes were extracted using `Variance Stabilizing Transformation (VST)` method in the Seurat package (v5.4.0) for the analysis because not all 25,083 genes present in the dataset are informative for distinguishing cell types, for example, housekeeping genes that are expressed equally in all cells add noise without adding information. VST accounts for the relationship between mean expression and variance.
 ~~~
 seurat_ass4 <- FindVariableFeatures(seurat_ass4, selection.method = "vst", nfeatures = 2000)
 ~~~
-Data was scaled using `ScaleData` to prepare the dataset for PCA and Clustering. This step prevents highly expressed genes from dominating PCA simply due to their magnitude. `vars.to.regress = "percent.mt"` was used to remove the influence of mitochondrial gene expression from the data so it doesn't drive clustering. Scaling all 25,083 genes required 29.3 GB of RAM which exceeded my system's available memory causing crashing. To remedy this, scaling was carried out on only variable features in the dataset, as downsteam PCA and UMAP require only the variable features.
+Data was scaled using `ScaleData` in the Seurat package (v5.4.0) to prepare the dataset for PCA and Clustering. This step prevents highly expressed genes from dominating PCA simply due to their magnitude. `vars.to.regress = "percent.mt"` was used to remove the influence of mitochondrial gene expression from the data so it doesn't drive clustering. Scaling all 25,083 genes required 29.3 GB of RAM which exceeded my system's available memory causing crashing. To remedy this, scaling was carried out on only variable features in the dataset, as downsteam PCA and UMAP require only the variable features.
 ~~~
 seurat_ass4 <- ScaleData(seurat_ass4, vars.to.regress = "percent.mt")
 ~~~
 
 ### 4. PCA
-Principal component analysis (PCA) was performed on the 2,000 most variable genes using `VariableFeatures` to reduce dimensionality prior to clustering.  
+Principal component analysis (PCA) was performed on the 2,000 most variable genes using `VariableFeatures` to reduce dimensionality prior to clustering, using the Seurat pacakge (v5.4.0).  
 ~~~
 seurat_ass4 <- RunPCA(seurat_ass4, features = VariableFeatures(object = seurat_ass4))
 ~~~
-Visualizations were carried out using a heat map, a scatter plot and an elbow plot. Heatmaps of top gene loadings were examined to confirm that principal components captured biologically meaningful sources of variation. The scatter plot was used to visualise the cells in the PCA space to determine whether the cells are separating into distinct groups, identify batch effects and confirm that prior normalization and scaling worked. The Elbow plot was plotted to determine the number of significant principal components and identify the point at which additional components explained minimal additional variance. 
+Visualizations were carried out using a heat map, a scatter plot and an elbow plot. Heatmaps of top gene loadings were examined to confirm that principal components captured biologically meaningful sources of variation. The scatter plot was used to visualise the cells in the PCA space to determine whether the cells are separating into distinct groups, identify batch effects and confirm that prior normalization and scaling worked. The Elbow plot was plotted to determine the number of significant principal components and identify the point at which additional components explained minimal additional variance.  
+Visualizations were carried out using Seurat package (v5.4.0) functions.
 ~~~
 DimHeatmap(seurat_ass4, dims = 1, cells = 500, balanced = TRUE)
 DimPlot(seurat_ass4, reduction = 'pca') + NoLegend() +
@@ -85,21 +86,22 @@ ElbowPlot(seurat_ass4)
 The ElbowPlot showed standard deviation of explained variance levels off around PC 15, meaning PCs beyond this point explain minimal additional biological variation and would add noise to the clustering rather than information.
 
 ### 5. Clustering 
-A K-nearest neighbor graph was first constructed using the first 15 principal components, selected based on the ElbowPlot, followed by shared nearest neighbor (SNN) graph refinement using `FindNeighbors`. 
+A K-nearest neighbor graph was first constructed using the first 15 principal components, selected based on the ElbowPlot, followed by shared nearest neighbor (SNN) graph refinement using `FindNeighbors` in the Seurat package (v5.4.0). 
 ~~~
 seurat_ass4 <- FindNeighbors(seurat_ass4, dims = 1:15)
 ~~~
-Cells were then clustered using the Louvain algorithm implemented in FindClusters, applied to the SNN graph at a resolution of 0.8, yielding 40 distinct clusters. Cell metadata including cluster assignments were extracted and saved for downstream analysis
+Cells were then clustered using the Louvain algorithm implemented in `FindClusters`, applied to the SNN graph at a resolution of 0.8, yielding 40 distinct clusters. Cell metadata including cluster assignments were extracted and saved for downstream analysis. 
 ~~~
 seurat_ass4 <- FindClusters(seurat_ass4, resolution = 0.8)
 ~~~
 ### 6. Uniform Manifold Approximation and Projection (UMAP)
 UMAP dimensionality reduction was performed using the first 15 principal components consistent with clustering, generating a two-dimensional embedding for visualization of the 40 identified clusters. It preserves both local and global structures of he data making it better for visualization of distinct cell populations, unlike PCA which is linear. The same 15 PCs used for clustering are used here to ensure consistency between your clusters and your visualization.
 ~~~
+seurat_ass4 <- RunUMAP(seurat_ass4, dims = 1:15)
 DimPlot(seurat_ass4, reduction = "umap", label = TRUE) + 
   ggtitle("UMAP of clusters")
 ~~~
-Cluster marker genes were identified using FindAllMarkers with the Wilcoxon rank sum test, retaining only positive markers expressed in at least 25% of cells within a cluster and exceeding a log2 fold change threshold of 0.25. Each cluster was downsampled to a maximum of 500 cells to manage computational memory requirements while maintaining statistical reliability. The markers identified in this step was used to carry out Manual annotation.
+Cluster marker genes were identified using `FindAllMarkers` in the Seurat package (v5.4.0), with the Wilcoxon rank sum test, retaining only positive markers expressed in at least 25% of cells within a cluster and exceeding a log2 fold change threshold of 0.25. Each cluster was downsampled to a maximum of 500 cells to manage computational memory requirements while maintaining statistical reliability. The markers identified in this step was used to carry out Manual annotation.
 ~~~
 all.markers <- FindAllMarkers(seurat_ass4, 
                               only.pos = TRUE,     
@@ -129,7 +131,7 @@ FeaturePlot(seurat_ass4,
   theme(plot.title = element_text(size = 10, face = "bold"))
 ~~~
 ### 8. Automated Annotation
-Automated cell type annotation was performed using SingleR with two complementary mouse reference datasets: ImmGenData for immune cell populations and MouseRNAseqData for broader cell type coverage including non-immune populations. To manage computational complexity given the 156,572 cell dataset, annotation was performed at the cluster level rather than the individual cell level, assigning a single label to each of the 40 clusters based on transcriptional similarity to reference profiles. Labels were subsequently mapped back to individual cells.
+Automated cell type annotation was performed using SingleR (v2.10.0) with two complementary mouse reference datasets: ImmGenData for immune cell populations and MouseRNAseqData for broader cell type coverage including non-immune populations. To manage computational complexity given the 156,572 cell dataset, annotation was performed at the cluster level rather than the individual cell level, assigning a single label to each of the 40 clusters based on transcriptional similarity to reference profiles. Labels were subsequently mapped back to individual cells.
 ~~~
 singler_results <- SingleR(test = seurat_counts,
                             ref = list(ImmGen = mouse_immgen,
@@ -146,7 +148,7 @@ Annotation confidence was assessed using SingleR score heatmaps, and results wer
 
 
 ### 9. Differential Expression Analysis using MAST
-Differential expression analysis between Naive and Day 8 post infection cells within cluster 0 was performed using MAST via Seurat's FindMarkers function. Genes were filtered to those expressed in at least 25% of cells with a minimum log2 fold change threshold of 0.25. Each group was downsampled to 500 cells to manage computational memory requirements.
+Differential expression analysis between Naive and Day 8 post infection cells within cluster 0 was performed using MAST (v 1.33.0) via Seurat's `FindMarkers` function. Genes were filtered to those expressed in at least 25% of cells with a minimum log2 fold change threshold of 0.25. Each group was downsampled to 500 cells to manage computational memory requirements.
 ~~~
 cluster0_DE_MAST <- FindMarkers(seurat_ass4,
                                  ident.1 = "Naive",
@@ -158,7 +160,7 @@ cluster0_DE_MAST <- FindMarkers(seurat_ass4,
                                  logfc.threshold = 0.25,
                                  max.cells.per.ident = 500)
 ~~~
-Results were visualized using volcano plots generated with ggplot2, with genes classified as significant if they exceeded an adjusted p-value threshold of 0.05 and an absolute log2 fold change greater than 0.5. The top 20 differentially expressed genes by fold change were labelled using ggrepel. This was done to identify the specific genes driving differences between Naive and D08 which feeds directly into your ORA/GSEA analysis.
+Results were visualized using volcano plots generated with ggplot2 (v4.0.2), with genes classified as significant if they exceeded an adjusted p-value threshold of 0.05 and an absolute log2 fold change greater than 0.5. The top 20 differentially expressed genes by fold change were labelled using ggrepel. This was done to identify the specific genes driving differences between Naive and D08.
 ~~~
 ggplot(cluster0_DE_MAST, aes(x = avg_log2FC,
                              y = -log10(p_val_adj),
@@ -179,13 +181,13 @@ ggplot(cluster0_DE_MAST, aes(x = avg_log2FC,
 ~~~
 
 ### 10. Over-representation Analysis of top genes in cluster 0
-Over-representation analysis (ORA) was performed on significant differentially expressed genes from the MAST analysis using the `enrichGO` function from clusterProfiler, with genes filtered to an adjusted p-value below 0.05 and absolute log2 fold change exceeding 0.5.
+Over-representation analysis (ORA) was performed on significant differentially expressed genes from the MAST analysis using the `enrichGO` function from clusterProfiler (v4.16.0), with genes filtered to an adjusted p-value below 0.05 and absolute log2 fold change exceeding 0.5.
 ~~~
 sig_genes_MAST <- rownames(cluster0_DE_MAST[
   cluster0_DE_MAST$p_val_adj < 0.05 & 
     abs(cluster0_DE_MAST$avg_log2FC) > 0.5, ])
 ~~~
-Gene Ontology Biological Process terms were tested against the mouse genome annotation database `org.Mm.eg.db.` Enriched pathways were filtered at a p-value and q-value cutoff of 0.05. 
+Gene Ontology Biological Process terms were tested against the mouse genome annotation database `org.Mm.eg.db.` v(3.21.0). Enriched pathways were filtered at a p-value and q-value cutoff of 0.05. 
 ~~~
 ora_results <- enrichGO(gene = sig_genes_MAST,
                          OrgDb = org.Mm.eg.db,
@@ -204,7 +206,7 @@ barplot(ora_results, showCategory = 20) +
   ggtitle("ORA - Cluster 0 Naive vs D08")
 ~~~
 ### 11. Cell Trajectory using Slingshot
-Cell trajectory analysis was performed using Slingshot to infer developmental and activation trajectories across cell types in the nasal mucosa during IAV infection. The Seurat object was converted to a SingleCellExperiment object and Slingshot was applied to the UMAP embedding using SingleR cell type annotations as cluster labels, with epithelial cells defined as the trajectory root consistent with their role as the primary target of IAV infection. 
+Cell trajectory analysis was performed using Slingshot (v 2.16.0) to infer developmental and activation trajectories across cell types in the nasal mucosa during IAV infection. The Seurat object was converted to a SingleCellExperiment object and Slingshot was applied to the UMAP embedding using SingleR cell type annotations as cluster labels, with epithelial cells defined as the trajectory root consistent with their role as the primary target of IAV infection. 
 ~~~
 sce <- slingshot(sce,
                   clusterLabels = "singler_labels",
@@ -257,7 +259,7 @@ Over-representation analysis of significant differentially expressed genes from 
 <img width="1300" height="500" alt="Automated Cell Type Annotation" src="https://github.com/user-attachments/assets/51499b45-305d-48c3-8252-6837dbb85b8b" />
 
 **Figure 5:** **Automatic Annotation**  
-Automated cell type annotation using SingleR with ImmGenData and MouseRNAseqData reference datasets assigned 15 distinct cell type labels across the 40 clusters. The annotation revealed a diverse cellular landscape consistent with the known biology of the murine nasal mucosa. The largest population was neurons comprising 50,782 cells concentrated in the large left UMAP region, consistent with the abundant olfactory sensory neurons documented in the source paper, which explicitly noted that neurons make up over 50,000 cells in the primary infection dataset. Epithelial cells formed the second largest population at 40,808 cells distributed across multiple UMAP regions reflecting the transcriptional diversity of nasal epithelial subtypes. Immune populations including macrophages, monocytes, B cells, NK cells and dendritic cells occupied distinct and spatially adjacent regions of the UMAP consistent with their shared haematopoietic lineage. The spatial co-localisation of monocytes, macrophages and dendritic cells is biologically consistent with the source paper's finding of stepwise monocyte recruitment and differentiation into monocyte-derived macrophages during IAV infection. Annotation results were validated against feature plot expression patterns with strong concordance between predicted cell type locations and known marker gene expression.
+Automated cell type annotation using SingleR with ImmGenData and MouseRNAseqData reference datasets assigned 15 distinct cell type labels across the 40 clusters. The annotation revealed a diverse cellular landscape consistent with the known biology of the murine nasal mucosa. The largest population was neurons comprising 50,782 cells concentrated in the large left UMAP region, consistent with the abundant olfactory sensory neurons documented in the source paper, which explicitly noted that neurons make up over 50,000 cells in the primary infection dataset. Epithelial cells formed the second largest population at 40,808 cells distributed across multiple UMAP regions reflecting the transcriptional diversity of nasal epithelial subtypes. Immune populations including macrophages, monocytes, B cells, NK cells and dendritic cells occupied distinct and spatially adjacent regions of the UMAP consistent with their shared haematopoietic lineage. The spatial co-localisation of monocytes, macrophages and dendritic cells is biologically consistent with the source paper's finding of stepwise monocyte recruitment and differentiation into monocyte-derived macrophages during IAV infection.
 
 <img width="890" height="414" alt="volcano plot" src="https://github.com/user-attachments/assets/0b13fbe8-9c4e-4993-9960-6f177df22317" />
 
@@ -267,17 +269,16 @@ Volcano plot visualization of MAST differential expression results for cluster 0
 <img width="1500" height="700" alt="Trajectory analysis" src="https://github.com/user-attachments/assets/35ea34a9-2d48-4fef-9e21-09bca72e88df" />
 
 **Figure 7:** **Cell Trajectory Analysis**  
-Slingshot trajectory analysis was performed on the full dataset using epithelial cells as the trajectory root, consistent with their role as the primary target of IAV infection. Multiple lineage trajectories were inferred from the UMAP embedding, with all trajectories converging near the epithelial cell population before branching toward distinct cell type destinations. A long trajectory connecting epithelial cells to the neuronal population reflected the transcriptional distance between these abundant non-immune populations. Within the immune compartment, trajectories connecting macrophages, monocytes and NK cells were identified, broadly consistent with the stepwise myeloid recruitment and lymphoid activation documented in the source paper during primary IAV infection. It should be noted that trajectory inference across diverse non-related cell types may reflect transcriptional similarity rather than true biological differentiation, and these results should be interpreted cautiously alongside the differential expression and ORA findings.
-
+Slingshot trajectory analysis was performed on the full dataset using epithelial cells as the trajectory root, consistent with their role as the primary target of IAV infection. Multiple lineage trajectories were inferred from the UMAP plot, with all trajectories converging near the epithelial cell population before branching toward distinct cell type destinations. A long trajectory connecting epithelial cells to the neuronal population reflected the transcriptional distance between these abundant non-immune populations. Within the immune compartment, trajectories connecting macrophages, monocytes and NK cells were identified, broadly consistent with the stepwise myeloid recruitment and lymphoid activation documented in the source paper during primary IAV infection. It should be noted that trajectory inference across diverse non-related cell types may reflect transcriptional similarity rather than true biological differentiation, and these results should be interpreted cautiously alongside the differential expression and ORA findings.
 
 
 ----
 ## Discussion
 The single-cell RNA sequencing analysis of 156,572 murine nasal mucosa cells across five timepoints yielded a high-quality dataset confirmed by a strong positive correlation of 0.83 between total UMI counts and genes detected per cell, consistent with quality metrics reported in comparable large-scale studies [2]. Thorough mixing of all five timepoints throughout the UMAP confirmed clustering was driven by cell type identity rather than technical batch effects, supporting the validity of downstream comparisons without data integration [1].  
 
-Clustering at resolution 0.8 identified 40 transcriptionally distinct populations, broadly consistent with the 42 clusters reported in the source paper, with minor differences attributable to slight variations in clustering resolution and quality control thresholds [1]. Automated annotation using SingleR with both ImmGenData and MouseRNAseqData reference databases identified 15 cell types spanning neural, epithelial, immune and stromal lineages. The largest population was neurons at 32.4%, consistent with the source paper's documentation of over 50,000 olfactory sensory neurons reflecting their biological abundance in the olfactory mucosa, similar to the paper's findings . Epithelial cells comprised 26.1% of total cells, consistent with the paper's identification of diverse epithelial subtypes including basal, ciliated, goblet and secretory populations [1]. Annotation confidence heatmaps confirmed high scoring for the majority of assignments, validating the use of complementary reference databases for comprehensive annotation of this mixed tissue dataset [3]. Feature plot analysis corroborated cell type assignments, with myeloid markers Tyrobp, Cst3 and C1qc co-localising in macrophage and monocyte clusters, the endothelial marker Flt1 restricted to a single isolated cluster, and neuronal marker S100a5 concentrated in the large left UMAP region, consistent with the known cellular heterogeneity of the murine nasal mucosa [4].  
+Clustering at resolution 0.8 identified 40 transcriptionally distinct populations, is broadly consistent with the 42 clusters reported in the source paper, with minor differences attributable to slight variations in clustering resolution and quality control thresholds [1]. Automated annotation using SingleR with both ImmGenData and MouseRNAseqData reference databases identified 15 cell types spanning neural, epithelial, immune and stromal lineages. The largest population was neurons at 32.4%, consistent with the source paper's documentation of over 50,000 olfactory sensory neurons reflecting their biological abundance in the olfactory mucosa, similar to the paper's findings . Epithelial cells comprised 26.1% of total cells, consistent with the paper's identification of diverse epithelial subtypes including basal, ciliated, goblet and secretory populations [1]. Annotation confidence heatmaps confirmed high scoring for the majority of assignments, validating the use of complementary reference databases for comprehensive annotation of this mixed tissue dataset [3]. Feature plot analysis corroborated cell type assignments, with myeloid markers Tyrobp, Cst3 and C1qc co-localising in macrophage and monocyte clusters, the endothelial marker Flt1 restricted to a single isolated cluster, and neuronal marker S100a5 concentrated in the large left UMAP region, consistent with the known cellular heterogeneity of the murine nasal mucosa [4].  
 
-Differential expression analysis using MAST between Naive and D08 cells within cluster 0, identified as a neuronal population, revealed significant transcriptional changes consistent with neuronal stress responses to peak influenza infection. Genes upregulated at D08 including the mitochondrial gene mt-Nd6 and oxidative stress response gene Nqo1 suggested increased metabolic demands during the inflammatory environment of peak infection, while downregulation of neuronal structural genes Kirrel2 and Dlg2 indicated reduced baseline neuronal function at this timepoint. These findings are consistent with evidence that the inflammatory cytokine environment generated during peak myeloid and T cell responses broadly affects neuronal gene expression in the nasal mucosa [5]. MAST was selected as the most appropriate statistical framework given its hurdle model accounts for zero inflation characteristic of single-cell data, outperforming bulk RNA-seq adapted methods [6].  
+Differential expression analysis using MAST between Naive and D08 cells within cluster 0, identified as a neuronal population, revealed significant transcriptional changes consistent with neuronal stress responses to peak influenza infection. Genes upregulated at D08 including the mitochondrial gene mt-Nd6 and oxidative stress response gene Nqo1 suggested increased metabolic demands during the inflammatory environment of peak infection, while downregulation of neuronal structural genes Kirrel2 and Dlg2 indicated reduced baseline neuronal function at this timepoint. These findings are consistent with evidence that the inflammatory cytokine environment generated during peak myeloid and T cell responses broadly affects neuronal gene expression in the nasal mucosa [5].   
 
 Over-representation analysis identified two major enriched biological themes: cytoplasmic translation and synaptic function, and mitochondrial energy metabolism including oxidative phosphorylation and cellular respiration. The enrichment of cytoplasmic translation with 15 contributing genes as the most statistically significant pathway suggests broadly altered protein synthesis in neuronal cells during peak infection. The concurrent enrichment of mitochondrial metabolic pathways is consistent with elevated neuronal energy demands during the inflammatory nasal environment, and the enrichment of synaptic pathways including neurotransmitter transport and synaptic vesicle cycling suggests coordinated disruption of neuronal signalling at D08. Neuronal metabolic disruption during respiratory viral infection has been documented in the context of olfactory dysfunction associated with both influenza and SARS-CoV-2, where inflammatory mediators during peak infection affect olfactory sensory neuron function [7].  
 
