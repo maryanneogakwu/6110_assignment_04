@@ -10,8 +10,32 @@ Dataset:   Primary nasal influenza infection rewires tissue-scale memory respons
 ----
 ## Methods
 ### 1. Data Acqusition
-
-### 2. Quality Control Checks
+Data used in this study was collected from the 2025 study by Kazer et al on  "Primary nasal influenza infection rewires tissue-scale memory response dynamic". The dataset was transformed  into a seurat object containing the metadata and the data, and was provided to the class by the course instrutor.  
+Data can be downloaded via the link below.  
+```
+https://aacgenomicspublic.blob.core.windows.net/public/seurat_ass4.rds
+```
+### 2. Quality Control 
+Qualitity Control checks were performed on the seurat object by calculating the mitochondrial percentage present in the cells and filtering to remove cells with very low numbers of unique genes detected as they could be low quality droplets or empty cells. Cells with very high gene counts will also be removed as these consititute the characteristics of doublets.  
+Caclculating mitochondrial contant. Note that the data set contains cells from *Mus musculus* (house mouse), so mitochondrial is denoted as `mt`. 
+~~~
+seurat_ass4[["percent.mt"]] <- PercentageFeatureSet(seurat_ass4, pattern = "^mt-")
+~~~
+The low quality cells were removed using the code below. `nFeature_RNA` > 200 used to keep cells with more that 200 genes detected.  This removes empty droplets, cellular debris and dying cells with low gene detection.
+`percent.mt < 20` used to keep cells with less than 20% mitochondrial reads. This removed damaged cells that leak cytoplasmic RNA out leaving high concentrations of mitochondrial RNA
+~~~
+seurat_ass4 <- subset(seurat_ass4, subset = nFeature_RNA > 200 & percent.mt < 20)
+~~~
+After quality control, the data was visualised using single cell violin plots to determine the thresholds to be used to filter the data and a regresion line graph to view the qc metrics.  
+Single cell violin plot:
+~~~
+VlnPlot(seurat_ass4, features = c ("nCount_RNA", "nFeature_RNA", "percent.mt"), ncol = 3)
+~~~
+Regression line graph:
+~~~
+FeatureScatter(seurat_ass4, feature1= "nCount_RNA", feature2 = "nFeature_RNA") + 
+  geom_smooth(method = 'lm')
+~~~
 
 ### 3. Normalisation and Scaling
 
