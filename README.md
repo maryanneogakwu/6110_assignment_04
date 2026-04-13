@@ -65,20 +65,61 @@ DimPlot(seurat_ass4, reduction = 'pca') + NoLegend() +
   ggtitle("PCA after Normalization and Scaling")
 ElbowPlot(seurat_ass4)
 ~~~
+The ElbowPlot showed standard deviation of explained variance levels off around PC 15, meaning PCs beyond this point explain minimal additional biological variation and would add noise to the clustering rather than information.
 
-### 5. UMAP
+### 5. Clustering 
+A K-nearest neighbor graph was first constructed using the first 15 principal components, selected based on the ElbowPlot, followed by shared nearest neighbor (SNN) graph refinement using `FindNeighbors`. 
+~~~
+seurat_ass4 <- FindNeighbors(seurat_ass4, dims = 1:15)
+~~~
+Cells were then clustered using the Louvain algorithm implemented in FindClusters, applied to the SNN graph at a resolution of 0.8, yielding 40 distinct clusters. Cell metadata including cluster assignments were extracted and saved for downstream analysis
+~~~
+seurat_ass4 <- FindClusters(seurat_ass4, resolution = 0.8)
+~~~
+### 6. Uniform Manifold Approximation and Projection (UMAP)
+UMAP dimensionality reduction was performed using the first 15 principal components consistent with clustering, generating a two-dimensional embedding for visualization of the 40 identified clusters. It preserves both local and global structures of he data making it better for visualization of distinct cell populations, unlike PCA which is linear. The same 15 PCs used for clustering are used here to ensure consistency between your clusters and your visualization.
+~~~
+DimPlot(seurat_ass4, reduction = "umap", label = TRUE) + 
+  ggtitle("UMAP of clusters")
+~~~
+Cluster marker genes were identified using FindAllMarkers with the Wilcoxon rank sum test, retaining only positive markers expressed in at least 25% of cells within a cluster and exceeding a log2 fold change threshold of 0.25. Each cluster was downsampled to a maximum of 500 cells to manage computational memory requirements while maintaining statistical reliability. The markers identified in this step was used to carry out Manual annotation.
+~~~
+all.markers <- FindAllMarkers(seurat_ass4, 
+                              only.pos = TRUE,     
+                              min.pct = 0.25,      
+                              logfc.threshold = 0.25,
+                              max.cells.per.ident = 500) 
+~~~
+### 7. Feature Plots
+Violin plots and feature plots were generated for genes selected based on their top contributions to the first five principal components, representing the major sources of transcriptional variation in the dataset. Feature plots were overlaid onto the UMAP embedding with a minimum expression cutoff at the 10th percentile to reduce background noise. These genes were selected to represent the diversity of cell types present in the nasal mucosa including myeloid, epithelial, fibroblast, endothelial, and macrophage populations.
+~~~
+Violin plot
+VlnPlot(seurat_ass4, features = c("Tyrobp", "Sparc", "Krt18", "Cst3", "S100a5", "Prdx6", "Col1a2", "Flt1", "C1qc"))
+Feature plot
+FeaturePlot(seurat_ass4,
+            features = c(
+              "Tyrobp",
+              "Sparc",
+              "Krt18",
+              "Cst3",
+              "S100a5",
+              "Prdx6",
+              "Col1a2",
+              "Flt1",
+              "C1qc"),
+            min.cutoff = "q10",
+            ncol = 3) &
+  theme(plot.title = element_text(size = 10, face = "bold"))
+~~~
+### 8. Automated Annotation
 
-### 6. Feature Plots
+### 9. Manual Annotation
 
-### 7. Automated Annotation
+### 10. Differential Expression Analysis using MAST
 
-### 8. Manual Annotation
+### 11. ORA Enrichment of top genes in cluster 0
 
-### 9. Differential Expression Analysis using MAST
-
-### 10. ORA Enrichment of top genes in cluster 0
-
-### 11. Cell Trajectory using Slingshot
+### 12. Cell Trajectory using Slingshot
 
 ----
 ## Results
