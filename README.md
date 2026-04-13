@@ -7,7 +7,10 @@ Dataset:   Primary nasal influenza infection rewires tissue-scale memory respons
 
 ## Introduction
 #### Justifications
-LogNormalize was selected over SCTransform due to computational constraints imposed by the dataset size of 156,572 cells. SCTransform required approximately 29.3 GB of contiguous RAM during residual matrix computation, exceeding available memory. LogNormalize is a well-established alternative that produces comparable clustering and differential expression results, particularly in large datasets where increased cell count provides sufficient statistical power. Mitochondrial gene expression was additionally regressed out during scaling to compensate for technical variation that SCTransform would otherwise account for.
+##### Normalization and Scaling
+LogNormalize was selected over SCTransform due to computational constraints imposed by the dataset size of 156,572 cells. SCTransform required approximately 29.3 GB of contiguous RAM during residual matrix computation, exceeding available memory. LogNormalize is a well-established alternative that produces comparable clustering and differential expression results, particularly in large datasets where increased cell count provides sufficient statistical power. Mitochondrial gene expression was additionally regressed out during scaling to compensate for technical variation that SCTransform would otherwise account for.  
+##### Differential Expression Analysis
+MAST was selected over DESeq2 as it was specifically developed for single-cell RNA sequencing data. Unlike DESeq2, which was originally designed for bulk RNA sequencing, MAST employs a hurdle model that simultaneously accounts for both the proportion of cells expressing a gene and the expression level among expressing cells, making it well suited to handle the zero-inflated nature of scRNA-seq data where many genes are detected in only a subset of cells. MAST additionally accounts for cellular detection rate as a covariate, reducing confounding technical variation. While DESeq2 has been adapted for single-cell use, its negative binomial model does not account for dropout events as effectively as MAST, making MAST the more statistically appropriate method for this dataset.
 
 ----
 ## Methods
@@ -112,10 +115,55 @@ FeaturePlot(seurat_ass4,
   theme(plot.title = element_text(size = 10, face = "bold"))
 ~~~
 ### 8. Automated Annotation
+Automated cell type annotation was performed using SingleR with two complementary mouse reference datasets: ImmGenData for immune cell populations and MouseRNAseqData for broader cell type coverage including non-immune populations. To manage computational complexity given the 156,572 cell dataset, annotation was performed at the cluster level rather than the individual cell level, assigning a single label to each of the 40 clusters based on transcriptional similarity to reference profiles. Labels were subsequently mapped back to individual cells.
+~~~
+singler_results <- SingleR(test = seurat_counts,
+                            ref = list(ImmGen = mouse_immgen,
+                                       MouseRNAseq = mouse_rnaseq),
+                            labels = list(mouse_immgen$label.main,
+                                          mouse_rnaseq$label.main),
+                            clusters = seurat_ass4@meta.data$seurat_clusters)
+~~~
+~~~
+seurat_ass4@meta.data$singler_labels <- singler_results$labels[
+  seurat_ass4@meta.data$seurat_clusters]
+~~~
+Annotation confidence was assessed using SingleR score heatmaps, and results were validated by comparing cell type assignments with known marker gene expression from the principal component analysis.
 
 ### 9. Manual Annotation
 
 ### 10. Differential Expression Analysis using MAST
+Differential expression analysis between Naive and Day 8 post infection cells within cluster 0 was performed using MAST via Seurat's FindMarkers function. Genes were filtered to those expressed in at least 25% of cells with a minimum log2 fold change threshold of 0.25. Each group was downsampled to 500 cells to manage computational memory requirements.
+~~~
+cluster0_DE_MAST <- FindMarkers(seurat_ass4,
+                                 ident.1 = "Naive",
+                                 ident.2 = "D08",
+                                 group.by = "orig.ident",
+                                 subset.ident = 0,
+                                 test.use = "MAST",
+                                 min.pct = 0.25,
+                                 logfc.threshold = 0.25,
+                                 max.cells.per.ident = 500)
+~~~
+Results were visualized using volcano plots generated with ggplot2, with genes classified as significant if they exceeded an adjusted p-value threshold of 0.05 and an absolute log2 fold change greater than 0.5. The top 20 differentially expressed genes by fold change were labelled using ggrepel. This was done to identify the specific genes driving differences between Naive and D08 which feeds directly into your ORA/GSEA analysis.
+~~~
+ggplot(cluster0_DE_MAST, aes(x = avg_log2FC,
+                             y = -log10(p_val_adj),
+                             color = significant)) +
+  geom_point(alpha = 0.6, size = 1.5) +
+  scale_color_manual(values = c("Significant" = "red",
+                                "Not Significant" = "grey")) +
+  geom_vline(xintercept = c(-0.5, 0.5), linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  geom_text_repel(data = top_genes,
+                  aes(label = gene),
+                  size = 3,
+                  max.overlaps = 20) +
+  ggtitle("Volcano Plot - Cluster 0 Naive vs D08 (MAST)") +
+  xlab("log2 Fold Change") +
+  ylab("-log10 Adjusted P-value") +
+  theme_classic()
+~~~
 
 ### 11. ORA Enrichment of top genes in cluster 0
 
