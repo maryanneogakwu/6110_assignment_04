@@ -224,9 +224,15 @@ pseudotime <- slingPseudotime(sce)
 ~~~
 ----
 ## Results
+
+<img width="1200" height="500" alt="Regression QC plot" src="https://github.com/user-attachments/assets/92543a5b-2283-478b-b19b-fd284c6d1d6c" />
+
+**Figure 1:** **Regression QC plot**  
+A scatter plot of total UMI counts against the number of detected genes per cell revealed a strong positive correlation of 0.83, indicating that cells with greater sequencing depth detected proportionally more unique genes as expected in high quality scRNA-seq data. Cells from all five timepoints showed consistent distributions, confirming the absence of timepoint-specific technical bias. A small population of cells with disproportionately high UMI counts relative to gene detection was observed, potentially representing doublets or low quality cells that passed the mitochondrial and gene count filtering thresholds applied during quality control.
+
 <img width="1000" height="500" alt="PC Elbow plot" src="https://github.com/user-attachments/assets/b22318c0-4921-4081-9d19-f3ac931ff628" />
 
-**Figure 1:** **Elbow plot of Principal Components**.
+**Figure 2:** **Elbow plot of Principal Components**  
 The elbow plot revealed a steep decline in standard deviation from PC1 through PC4, capturing the major sources of transcriptional variation including myeloid versus fibroblast (PC1), epithelial versus myeloid (PC2), and macrophage versus neutrophil (PC5) cell type differences. The curve plateaued at approximately PC15, beyond which additional components explained minimal additional variance. Consequently, the first 15 principal components were selected for downstream clustering and UMAP embedding, balancing biological information capture with noise reduction.
 
 
