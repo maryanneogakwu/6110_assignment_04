@@ -224,6 +224,14 @@ pseudotime <- slingPseudotime(sce)
 ~~~
 ----
 ## Results
+<img width="1000" height="500" alt="PC Elbow plot" src="https://github.com/user-attachments/assets/b22318c0-4921-4081-9d19-f3ac931ff628" />
+
+**Figure 1:** **Elbow plot of Principal Components**.
+The elbow plot revealed a steep decline in standard deviation from PC1 through PC4, capturing the major sources of transcriptional variation including myeloid versus fibroblast (PC1), epithelial versus myeloid (PC2), and macrophage versus neutrophil (PC5) cell type differences. The curve plateaued at approximately PC15, beyond which additional components explained minimal additional variance. Consequently, the first 15 principal components were selected for downstream clustering and UMAP embedding, balancing biological information capture with noise reduction.
+
+
+
+
 
 ----
 ## Discussion
