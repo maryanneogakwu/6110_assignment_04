@@ -1,7 +1,7 @@
 # 6110_assignment_04
 **Single Cell RNA seq analysis of nasal influenza infection in Mouse**  
 Author: Maryanne Ogakwu  
-Dataset:   Primary nasal influenza infection rewires tissue-scale memory response dynamics by Kazer et al. 2025 [1]
+Dataset: Primary nasal influenza infection rewires tissue-scale memory response dynamics by Kazer et al. 2025 [1]
 
 ----
 
@@ -134,9 +134,8 @@ seurat_ass4@meta.data$singler_labels <- singler_results$labels[
 ~~~
 Annotation confidence was assessed using SingleR score heatmaps, and results were validated by comparing cell type assignments with known marker gene expression from the principal component analysis.
 
-### 9. Manual Annotation
 
-### 10. Differential Expression Analysis using MAST
+### 9. Differential Expression Analysis using MAST
 Differential expression analysis between Naive and Day 8 post infection cells within cluster 0 was performed using MAST via Seurat's FindMarkers function. Genes were filtered to those expressed in at least 25% of cells with a minimum log2 fold change threshold of 0.25. Each group was downsampled to 500 cells to manage computational memory requirements.
 ~~~
 cluster0_DE_MAST <- FindMarkers(seurat_ass4,
@@ -169,7 +168,7 @@ ggplot(cluster0_DE_MAST, aes(x = avg_log2FC,
   theme_classic()
 ~~~
 
-### 11. Over-representation Analysis of top genes in cluster 0
+### 10. Over-representation Analysis of top genes in cluster 0
 Over-representation analysis (ORA) was performed on significant differentially expressed genes from the MAST analysis using the `enrichGO` function from clusterProfiler, with genes filtered to an adjusted p-value below 0.05 and absolute log2 fold change exceeding 0.5.
 ~~~
 sig_genes_MAST <- rownames(cluster0_DE_MAST[
@@ -194,7 +193,7 @@ dotplot(ora_results, showCategory = 20) +
 barplot(ora_results, showCategory = 20) +
   ggtitle("ORA - Cluster 0 Naive vs D08")
 ~~~
-### 12. Cell Trajectory using Slingshot
+### 11. Cell Trajectory using Slingshot
 Cell trajectory analysis was performed using Slingshot to infer developmental and activation trajectories across cell types in the nasal mucosa during IAV infection. The Seurat object was converted to a SingleCellExperiment object and Slingshot was applied to the UMAP embedding using SingleR cell type annotations as cluster labels, with epithelial cells defined as the trajectory root consistent with their role as the primary target of IAV infection. 
 ~~~
 sce <- slingshot(sce,
@@ -264,10 +263,19 @@ Slingshot trajectory analysis was performed on the full dataset using epithelial
 
 ----
 ## Discussion
+The single-cell RNA sequencing analysis of 156,572 murine nasal mucosa cells across five timepoints yielded a high-quality dataset confirmed by a strong positive correlation of 0.83 between total UMI counts and genes detected per cell, consistent with quality metrics reported in comparable large-scale studies [2]. Thorough mixing of all five timepoints throughout the UMAP confirmed clustering was driven by cell type identity rather than technical batch effects, supporting the validity of downstream comparisons without data integration [1].  
 
+Clustering at resolution 0.8 identified 40 transcriptionally distinct populations, broadly consistent with the 42 clusters reported in the source paper, with minor differences attributable to slight variations in clustering resolution and quality control thresholds [1]. Automated annotation using SingleR with both ImmGenData and MouseRNAseqData reference databases identified 15 cell types spanning neural, epithelial, immune and stromal lineages. The largest population was neurons at 32.4%, consistent with the source paper's documentation of over 50,000 olfactory sensory neurons reflecting their biological abundance in the olfactory mucosa, similar to the paper's findings . Epithelial cells comprised 26.1% of total cells, consistent with the paper's identification of diverse epithelial subtypes including basal, ciliated, goblet and secretory populations [1]. Annotation confidence heatmaps confirmed high scoring for the majority of assignments, validating the use of complementary reference databases for comprehensive annotation of this mixed tissue dataset [3]. Feature plot analysis corroborated cell type assignments, with myeloid markers Tyrobp, Cst3 and C1qc co-localising in macrophage and monocyte clusters, the endothelial marker Flt1 restricted to a single isolated cluster, and neuronal marker S100a5 concentrated in the large left UMAP region, consistent with the known cellular heterogeneity of the murine nasal mucosa [4].  
+
+Differential expression analysis using MAST between Naive and D08 cells within cluster 0, identified as a neuronal population, revealed significant transcriptional changes consistent with neuronal stress responses to peak influenza infection. Genes upregulated at D08 including the mitochondrial gene mt-Nd6 and oxidative stress response gene Nqo1 suggested increased metabolic demands during the inflammatory environment of peak infection, while downregulation of neuronal structural genes Kirrel2 and Dlg2 indicated reduced baseline neuronal function at this timepoint. These findings are consistent with evidence that the inflammatory cytokine environment generated during peak myeloid and T cell responses broadly affects neuronal gene expression in the nasal mucosa [5]. MAST was selected as the most appropriate statistical framework given its hurdle model accounts for zero inflation characteristic of single-cell data, outperforming bulk RNA-seq adapted methods [6].  
+
+Over-representation analysis identified two major enriched biological themes: cytoplasmic translation and synaptic function, and mitochondrial energy metabolism including oxidative phosphorylation and cellular respiration. The enrichment of cytoplasmic translation with 15 contributing genes as the most statistically significant pathway suggests broadly altered protein synthesis in neuronal cells during peak infection. The concurrent enrichment of mitochondrial metabolic pathways is consistent with elevated neuronal energy demands during the inflammatory nasal environment, and the enrichment of synaptic pathways including neurotransmitter transport and synaptic vesicle cycling suggests coordinated disruption of neuronal signalling at D08. Neuronal metabolic disruption during respiratory viral infection has been documented in the context of olfactory dysfunction associated with both influenza and SARS-CoV-2, where inflammatory mediators during peak infection affect olfactory sensory neuron function [7].  
+
+Slingshot trajectory analysis inferred multiple lineage trajectories from the epithelial cell root, consistent with their role as the primary target of IAV infection. Within the immune compartment, trajectories connecting monocytes and macrophages broadly reflected the stepwise myeloid recruitment and differentiation documented in the source paper [1]. It should be noted that trajectory inference across transcriptionally diverse non-related cell types may reflect transcriptional similarity rather than true biological differentiation and should be interpreted cautiously alongside the differential expression findings [8].
 
 ----
 ## Conclusion
+This analysis presents a comprehensive single-cell RNA sequencing characterisation of the murine nasal mucosa across primary influenza A virus infection timepoints. Through quality control, normalisation, dimensionality reduction and clustering, 156,572 cells were resolved into 40 transcriptionally distinct populations spanning neural, epithelial, immune and stromal lineages, broadly recapitulating the cellular atlas described by Kazer et al. (2024). Automated annotation identified neurons and epithelial cells as the dominant populations, consistent with the known biology of the nasal mucosa, while immune populations including macrophages, monocytes, B cells and NK cells were clearly delineated. Differential expression analysis using MAST and subsequent over-representation analysis revealed that peak IAV infection at D08 induces coordinated disruption of neuronal protein synthesis, mitochondrial energy metabolism and synaptic signalling in olfactory neurons, providing pathway-level insight into the neuronal consequences of respiratory viral infection. Trajectory analysis further supported the stepwise immune activation dynamics documented in the source paper. Together these findings demonstrate the power of single-cell transcriptomics to resolve the complex cellular and molecular responses to viral infection at tissue scale, and highlight the olfactory neuronal compartment as a key site of transcriptional disruption during peak influenza infection with implications for the sensory symptoms associated with respiratory viral disease.
 
 ----
 
@@ -292,4 +300,12 @@ Slingshot trajectory analysis was performed on the full dataset using epithelial
 | Slingshot | 2.16.0 | Bio C 3.21 | Tools for ordering single cell sequences |
 
 ## References
-[1] Kazer, S. W., Match, C. M., Langan, E. M., Messou, M. A., LaSalle, T. J., O'Leary, E., Marbourg, J., Naughton, K., von Andrian, U. H., & Ordovas-Montanes, J. (2024). Primary nasal influenza infection rewires tissue-scale memory response dynamics. Immunity, 57(8), 1955–1974.e8. https://doi.org/10.1016/j.immuni.2024.06.005
+[1] Kazer, S. W., Match, C. M., Langan, E. M., Messou, M. A., LaSalle, T. J., O'Leary, E., Marbourg, J., Naughton, K., von Andrian, U. H., & Ordovas-Montanes, J. (2024). Primary nasal influenza infection rewires tissue-scale memory response dynamics. Immunity, 57(8), 1955–1974.e8. https://doi.org/10.1016/j.immuni.2024.06.005  
+[2]   luecken, M.D., Theis, F.J. Current best practices in single‐cell RNA‐seq analysis: a tutorial. Mol Syst Biol 15, MSB188746 (2019). https://doi.org/10.15252/msb.20188746  
+[3] Aran, D., Looney, A.P., Liu, L. et al. Reference-based analysis of lung single-cell sequencing reveals a transitional profibrotic macrophage. Nat Immunol 20, 163–172 (2019). https://doi.org/10.1038/s41590-018-0276-y  
+[4] Wagner, J., Carey, S., & Harkema, J. (2006). The Nose Revisited: A Brief Review of the Comparative Structure, Function, and Toxicologic Pathology of the Nasal Epithelium. Toxicologic Pathology, 34(3), 252–269. https://doi.org/10.1080/01926230600713475  
+[5] Dumm, R. E., Wellford, S. A., Moseman, E. A., & Heaton, N. S. (2020). Heterogeneity of Antiviral Responses in the Upper Respiratory Tract Mediates Differential Non-lytic Clearance of Influenza Viruses. Cell reports, 32(9), 108103. https://doi.org/10.1016/j.celrep.2020.108103  
+[6] Finak, G., McDavid, A., Yajima, M. et al. MAST: a flexible statistical framework for assessing transcriptional changes and characterizing heterogeneity in single-cell RNA sequencing data. Genome Biol 16, 278 (2015). https://doi.org/10.1186/s13059-015-0844-5  
+[7] David H. Brann et al. ,Non-neuronal expression of SARS-CoV-2 entry genes in the olfactory system suggests mechanisms underlying COVID-19-associated anosmia.Sci. Adv.6,eabc5801(2020).DOI:10.1126/sciadv.abc5801  
+[8] Street, K., Risso, D., Fletcher, R. B., Das, D., Ngai, J., Yosef, N., Purdom, E., & Dudoit, S. (2018). Slingshot: cell lineage and pseudotime inference for single-cell transcriptomics. BMC genomics, 19(1), 477. https://doi.org/10.1186/s12864-018-4772-0
+
