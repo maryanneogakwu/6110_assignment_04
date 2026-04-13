@@ -9,8 +9,12 @@ Dataset:   Primary nasal influenza infection rewires tissue-scale memory respons
 #### Justifications
 ##### Normalization and Scaling
 LogNormalize was selected over SCTransform due to computational constraints imposed by the dataset size of 156,572 cells. SCTransform required approximately 29.3 GB of contiguous RAM during residual matrix computation, exceeding available memory. LogNormalize is a well-established alternative that produces comparable clustering and differential expression results, particularly in large datasets where increased cell count provides sufficient statistical power. Mitochondrial gene expression was additionally regressed out during scaling to compensate for technical variation that SCTransform would otherwise account for.  
-##### Differential Expression Analysis
-MAST was selected over DESeq2 as it was specifically developed for single-cell RNA sequencing data. Unlike DESeq2, which was originally designed for bulk RNA sequencing, MAST employs a hurdle model that simultaneously accounts for both the proportion of cells expressing a gene and the expression level among expressing cells, making it well suited to handle the zero-inflated nature of scRNA-seq data where many genes are detected in only a subset of cells. MAST additionally accounts for cellular detection rate as a covariate, reducing confounding technical variation. While DESeq2 has been adapted for single-cell use, its negative binomial model does not account for dropout events as effectively as MAST, making MAST the more statistically appropriate method for this dataset.
+
+##### Differential Expression Analysis  
+MAST was selected over DESeq2 as it was specifically developed for single-cell RNA sequencing data. Unlike DESeq2, which was originally designed for bulk RNA sequencing, MAST employs a hurdle model that simultaneously accounts for both the proportion of cells expressing a gene and the expression level among expressing cells, making it well suited to handle the zero-inflated nature of scRNA-seq data where many genes are detected in only a subset of cells. MAST additionally accounts for cellular detection rate as a covariate, reducing confounding technical variation. While DESeq2 has been adapted for single-cell use, its negative binomial model does not account for dropout events as effectively as MAST, making MAST the more statistically appropriate method for this dataset.  
+
+##### Cell Trajectory Analysis  
+Slingshot was selected over Monocle3 as it integrates directly with the SingleCellExperiment framework compatible with our existing Seurat workflow, avoiding the additional object conversion required by Monocle3. While Monocle3 supports complex trajectory topologies, its graph learning algorithm is considerably slower on datasets exceeding 100,000 cells, making it less practical for this 156,572 cell dataset. Additionally, Slingshot's ability to incorporate predefined cell type labels from our SingleR annotation as trajectory nodes allowed biologically informed trajectory inference consistent with our annotation results
 
 ----
 ## Methods
@@ -165,10 +169,59 @@ ggplot(cluster0_DE_MAST, aes(x = avg_log2FC,
   theme_classic()
 ~~~
 
-### 11. ORA Enrichment of top genes in cluster 0
+### 11. Over-representation Analysis of top genes in cluster 0
+Over-representation analysis (ORA) was performed on significant differentially expressed genes from the MAST analysis using the `enrichGO` function from clusterProfiler, with genes filtered to an adjusted p-value below 0.05 and absolute log2 fold change exceeding 0.5.
+~~~
+sig_genes_MAST <- rownames(cluster0_DE_MAST[
+  cluster0_DE_MAST$p_val_adj < 0.05 & 
+    abs(cluster0_DE_MAST$avg_log2FC) > 0.5, ])
+~~~
+Gene Ontology Biological Process terms were tested against the mouse genome annotation database `org.Mm.eg.db.` Enriched pathways were filtered at a p-value and q-value cutoff of 0.05. 
+~~~
+ora_results <- enrichGO(gene = sig_genes_MAST,
+                         OrgDb = org.Mm.eg.db,
+                         keyType = "SYMBOL",
+                         ont = "BP",
+                         pvalueCutoff = 0.05,
+                         qvalueCutoff = 0.05,
+                         readable = TRUE)
+~~~
+Results were visualized using dot plots and bar plots displaying the top 20 enriched biological processes, with dot size representing gene count and colour representing statistical significance.
+~~~
+dotplot(ora_results, showCategory = 20) +
+  ggtitle("ORA - Cluster 0 Naive vs D08")
 
+barplot(ora_results, showCategory = 20) +
+  ggtitle("ORA - Cluster 0 Naive vs D08")
+~~~
 ### 12. Cell Trajectory using Slingshot
-
+Cell trajectory analysis was performed using Slingshot to infer developmental and activation trajectories across cell types in the nasal mucosa during IAV infection. The Seurat object was converted to a SingleCellExperiment object and Slingshot was applied to the UMAP embedding using SingleR cell type annotations as cluster labels, with epithelial cells defined as the trajectory root consistent with their role as the primary target of IAV infection. 
+~~~
+sce <- slingshot(sce,
+                  clusterLabels = "singler_labels",
+                  reducedDim = "UMAP",
+                  start.clus = "Epithelial cells")
+~~~
+Trajectories were visualized by overlaying inferred lineage curves onto the UMAP embedding colored by cell type.
+~~~
+plot(reducedDims(sce)$UMAP,
+     col = colors[sce$singler_labels],
+     pch = 16,
+     cex = 0.3)
+lines(SlingshotDataSet(sce),
+      lwd = 2,
+      col = "black")
+title("Slingshot Trajectory")
+legend("bottomright",
+        legend = cell_types,
+        col = colors,
+        pch = 16,
+        cex = 0.7)
+~~~
+Pseudotime values were extracted for each cell representing their position along the inferred trajectory and saved for downstream analysis.
+~~~
+pseudotime <- slingPseudotime(sce)
+~~~
 ----
 ## Results
 
